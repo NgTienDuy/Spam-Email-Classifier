@@ -2,11 +2,14 @@ import os
 import re
 import string
 import pandas as pd
+import nltk
 from pathlib import Path
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn.model_selection import train_test_split
 
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 STOP_WORDS = set(stopwords.words("english"))
 LEMMATIZER = WordNetLemmatizer()
 
