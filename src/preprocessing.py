@@ -7,6 +7,8 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn.model_selection import train_test_split
 
+STOP_WORDS = set(stopwords.words("english"))
+LEMMATIZER = WordNetLemmatizer()
 
 # =============================
 # 🔹 HÀM LÀM SẠCH NỘI DUNG
@@ -21,11 +23,8 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\d+", " ", text)               # bỏ số
     text = re.sub(r"\s+", " ", text).strip()       # bỏ khoảng trắng thừa
 
-    stop_words = set(stopwords.words("english"))
-    lemmatizer = WordNetLemmatizer()
-    words = [lemmatizer.lemmatize(w) for w in text.split() if w not in stop_words]
+    words = [LEMMATIZER.lemmatize(w) for w in text.split() if w not in STOP_WORDS]
     return " ".join(words)
-
 
 # =============================
 # 🔹 TIỀN XỬ LÝ DỮ LIỆU CHÍNH
@@ -65,7 +64,6 @@ def preprocess_data(input_path="data/spam.csv", output_path="data/preprocessed.c
     print(f"📊 Tổng số mẫu sau xử lý: {len(df)}")
 
     return df
-
 
 # =============================
 # 🔹 HÀM CHIA DỮ LIỆU
