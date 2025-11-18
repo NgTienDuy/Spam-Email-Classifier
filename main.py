@@ -1,77 +1,72 @@
-# main.py
-from src.preprocessing import clean_text
+import tkinter as tk
+from tkinter import messagebox, ttk
 import joblib
 import os
 
-# ==============================
-# 🔹 Danh sách mô hình
-# ==============================
-MODEL_FILES = {
-    "1": ("Naive Bayes", "model/naive_bayes.pkl"),
-    "2": ("Logistic Regression", "model/logistic_regression.pkl"),
-    "3": ("SVM", "model/svm.pkl"),
-    "4": ("Random Forest", "model/random_forest.pkl"),
-    "5": ("KNN", "model/knn.pkl"),
-    "6": ("Tất cả", None)  # Placeholder cho chọn tất cả
-}
+# ======= Load tất cả mô hình .pkl =======
+model_folder = "model/"
+models = {}
+for file in os.listdir(model_folder):
+    if file.endswith(".pkl"):
+        # Tên model lấy theo tên file, có thể tùy chỉnh nếu cần
+        name = file.replace(".pkl", "").replace("_", " ").title()
+        models[name] = joblib.load(os.path.join(model_folder, file))
 
-# ==============================
-# 🔹 Load tất cả mô hình
-# ==============================
-def load_models():
-    loaded_models = {}
-    for key, (name, path) in MODEL_FILES.items():
-        if path is not None:
-            if not os.path.exists(path):
-                raise FileNotFoundError(f"Không tìm thấy file mô hình: {path}")
-            vectorizer, model = joblib.load(path)
-            loaded_models[name] = (vectorizer, model)
-    return loaded_models
+if not models:
+    raise FileNotFoundError("Không tìm thấy file mô hình nào (.pkl). Hãy chạy train_models.py trước.")
 
-# ==============================
-# 🔹 Chọn mô hình
-# ==============================
-def select_model():
-    print("📬 SPAM EMAIL CLASSIFIER")
-    print("=======================")
-    print("Chọn mô hình muốn dùng:")
-    for key, (name, _) in MODEL_FILES.items():
-        print(f"{key}. {name}")
-    choice = input("Nhập số tương ứng (1-6): ").strip()
-    while choice not in MODEL_FILES:
-        choice = input("Lựa chọn không hợp lệ. Nhập lại (1-6): ").strip()
-    return choice
+# ======= Giao diện =======
+root = tk.Tk()
+root.title("Spam Email Classifier - Multi Model")
+root.geometry("600x600")
+root.config(bg="#f3f3f3")
 
-# ==============================
-# 🔹 Hàm phân loại email cho 1 mô hình
-# ==============================
-def classify_email(vectorizer, model, text):
-    clean = clean_text(text)
-    vec = vectorizer.transform([clean])
-    pred = model.predict(vec)[0]
-    return "SPAM 🧨" if str(pred) == '1' else "NON-SPAM ✅"
+tk.Label(root, text="Nhập nội dung email:", font=("Arial", 14), bg="#f3f3f3").pack(pady=10)
+text_input = tk.Text(root, height=10, width=60, font=("Arial", 12))
+text_input.pack(pady=5)
 
-# ==============================
-# 🔹 Main
-# ==============================
-if __name__ == "__main__":
-    loaded_models = load_models()
-    while True:
-        choice = select_model()
-        if choice == "6":  # Tất cả
-            text = input("\nNhập email/text (gõ 'exit' để thoát):\n> ")
-            if text.lower() == 'exit':
-                break
-            print("\n📊 Kết quả dự đoán từ tất cả mô hình:")
-            for name, (vectorizer, model) in loaded_models.items():
-                result = classify_email(vectorizer, model, text)
-                print(f"{name}: {result}")
-            print()
-        else:
-            name, path = MODEL_FILES[choice]
-            vectorizer, model = loaded_models[name]
-            text = input(f"\nNhập email/text để phân loại bằng {name} (gõ 'exit' để thoát):\n> ")
-            if text.lower() == 'exit':
-                break
-            result = classify_email(vectorizer, model, text)
-            print(f"👉 Dự đoán bằng {name}: {result}\n")
+# ======= Dropdown chọn mô hình =======
+tk.Label(root, text="Chọn mô hình phân loại:", font=("Arial", 13), bg="#f3f3f3").pack(pady=10)
+model_names = list(models.keys())
+model_names.insert(0, "Tất cả")  # Thêm lựa chọn tất cả
+model_choice = ttk.Combobox(root, values=model_names, font=("Arial", 12), state="readonly")
+model_choice.set("Tất cả")
+model_choice.pack(pady=5)
+
+# ======= Hàm dự đoán =======
+def predict():
+    email = text_input.get("1.0", tk.END).strip()
+    if not email:
+        messagebox.showwarning("Cảnh báo", "Vui lòng nhập nội dung email!")
+        return
+
+    # Map nhãn số sang nhãn chữ
+    label_map = {
+        0: "non-spam",
+        1: "spam"
+    }
+
+    selected = model_choice.get()
+    result_texts = []
+
+    if selected == "Tất cả":
+        # Dự đoán với tất cả mô hình
+        for name, model in models.items():
+            pred = model.predict([email])[0]
+            pred_label = label_map.get(int(pred), str(pred))
+            color = "red" if pred_label == "spam" else "green"
+            result_texts.append(f"{name}: {pred_label.upper()}")
+        result_label.config(text="\n".join(result_texts), fg="black")
+    else:
+        model = models[selected]
+        pred = model.predict([email])[0]
+        pred_label = label_map.get(int(pred), str(pred))
+        color = "red" if pred_label == "spam" else "green"
+        result_label.config(text=f"{selected}: {pred_label.upper()}", fg=color)
+
+# ======= Nút và nhãn kết quả =======
+tk.Button(root, text="Phân loại", font=("Arial", 13, "bold"), bg="#0078D7", fg="white", command=predict).pack(pady=10)
+result_label = tk.Label(root, text="", font=("Arial", 14, "bold"), bg="#f3f3f3", justify="left")
+result_label.pack(pady=10)
+
+root.mainloop()

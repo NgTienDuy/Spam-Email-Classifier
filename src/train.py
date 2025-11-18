@@ -26,6 +26,26 @@ MODELS = {
 
 
 # ======================================
+# 🔹 HÀM DỌN SẠCH DỮ LIỆU TRƯỚC KHI TRAIN
+# ======================================
+def clean_training_data(df):
+    # Ép text về string
+    df["text"] = df["text"].astype(str)
+
+    # Loại bỏ NaN, None, rỗng
+    df = df[df["text"].notna()]
+    df = df[df["text"].str.strip() != ""]
+
+    # Làm sạch label
+    df["label"] = df["label"].astype(str).str.strip()
+    df = df[df["label"].notna()]
+    df = df[df["label"] != ""]
+
+    df = df.reset_index(drop=True)
+    return df
+
+
+# ======================================
 # 🔹 HÀM HUẤN LUYỆN VỚI CROSS VALIDATION
 # ======================================
 def train_with_cross_validation(
@@ -40,6 +60,13 @@ def train_with_cross_validation(
     for fold, (train_idx, val_idx) in enumerate(skf.split(X, y), 1):
         X_train, X_val = X.iloc[train_idx], X.iloc[val_idx]
         y_train, y_val = y.iloc[train_idx], y.iloc[val_idx]
+
+        # DỌN SẠCH TRONG TỪNG FOLD
+        mask_train = X_train.notna() & (X_train.str.strip() != "")
+        mask_val = X_val.notna() & (X_val.str.strip() != "")
+
+        X_train, y_train = X_train[mask_train], y_train[mask_train]
+        X_val, y_val = X_val[mask_val], y_val[mask_val]
 
         # Pipeline: TF-IDF + Model
         pipe = Pipeline([
@@ -78,6 +105,10 @@ def train_with_cross_validation(
 def main():
     # Đọc dữ liệu train
     df_train = pd.read_csv("data/train.csv")
+
+    # DỌN SẠCH dữ liệu trước train
+    df_train = clean_training_data(df_train)
+
     X, y = df_train["text"], df_train["label"]
 
     results = {}
